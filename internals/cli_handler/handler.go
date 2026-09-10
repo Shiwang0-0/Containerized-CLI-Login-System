@@ -1,4 +1,4 @@
-package cli
+package cli_handler
 
 import (
 	"bufio"
@@ -6,8 +6,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
 	"golang.org/x/term"
 )
+
+type Handler struct {
+	userService *service.UserService
+	session     *session.Session
+}
+
+func NewHandler(userService *service.UserService) *Handler {
+	return &Handler{userService: userService}
+}
 
 // ValidateFunc validates a single piece of input.
 type ValidateFunc func(string) error

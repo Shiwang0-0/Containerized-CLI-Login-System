@@ -1,3 +1,39 @@
+### Run SQL using docker compose
+
+```bash
+docker compose up
+
+docker compose down # volume still persist
+docker compose down -v # volume deleted
+
+# to view the running container
+docker compose ps
+
+# to run commands inside the container
+docker compose exec mysql mysql -u <user> -p<password> <db_name>
+```
+Note: The migration command is present in the docker compose file itself, so write the migration into a new incremental file so that the previous data is still present in the volume and you dont have to delete the volume.
+
+
+# Some good practices that I followed
+
+### Repository Pattern  
+Whole codebase is divided keeping the repository pattern in mind, this allows seperation of concerns for different usecases.
+
+### Retrying if Database connection failed  
+```go
+	for i := 1; i <= 5; i++ {
+		if err := db.Ping(); err != nil {
+			log.Printf("MySQL connection attempt %d/5 failed: %v", i, err)
+			time.Sleep(2 * time.Second)
+		} else {
+			log.Println("MySQL connected")
+			connected = true
+			break
+		}
+	}
+```
+
 ### Validator for Username and Password input
 
 using `go-playground/validator/v10` library for input validation and created a custom regex validator for username
