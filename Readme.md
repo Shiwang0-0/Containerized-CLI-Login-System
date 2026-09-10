@@ -3,6 +3,9 @@
 ```bash
 docker compose up
 
+# migrate
+migrate   -path ./migrations  -database "mysql://cli_user:cli_password@tcp(localhost:3307)/cli_db" up
+
 docker compose down # volume still persist
 docker compose down -v # volume deleted
 

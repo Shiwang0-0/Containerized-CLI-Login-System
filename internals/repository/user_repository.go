@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/models"
 )
@@ -30,15 +31,36 @@ func (r *UserRepository) Create(user models.User) error {
 
 func (r *UserRepository) FindByUsername(username string) (models.User, error) {
 	var u models.User
-	row := r.db.QueryRow(
-		`SELECT username, password_hash, created_at FROM users WHERE username = ?`,
-		username,
-	)
-	if err := row.Scan(&u.Username, &u.PasswordHash, &u.CreatedAt); err != nil {
+
+	row := r.db.QueryRow(`
+		SELECT username, password_hash, created_at, totp_secret, totp_enabled FROM users WHERE username = ?`, username)
+
+	if err := row.Scan(&u.Username, &u.PasswordHash, &u.CreatedAt, &u.TOTPSecret, &u.TOTPEnabled); err != nil {
 		if err == sql.ErrNoRows {
 			return models.User{}, models.ErrUserNotFound
 		}
+
 		return models.User{}, err
 	}
+
 	return u, nil
+}
+
+func (r *UserRepository) UpdateTOTP(username string, secret string, enabled bool) error {
+	result, err := r.db.Exec(` UPDATE users SET totp_secret = ?, totp_enabled = ? WHERE username = ?`, secret, enabled, username)
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }

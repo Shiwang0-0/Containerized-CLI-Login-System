@@ -14,7 +14,6 @@ services:
 
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./migrations:/docker-entrypoint-initdb.d:ro
 
 volumes:
   mysql_data:
