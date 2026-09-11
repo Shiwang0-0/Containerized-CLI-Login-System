@@ -1,0 +1,9 @@
+ALTER TABLE users
+    DROP COLUMN failed_attempts,
+    DROP COLUMN locked_until,
+    DROP COLUMN lockout_level,
+    DROP COLUMN last_lockout_at,
+    DROP COLUMN totp_failed_attempts,
+    DROP COLUMN totp_locked_until,
+    DROP COLUMN totp_lockout_level,
+    DROP COLUMN totp_last_lockout_at;

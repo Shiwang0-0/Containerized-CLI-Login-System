@@ -31,6 +31,11 @@ func (h *Handler) LoginUser(reader *bufio.Reader) (string, error) {
 			fmt.Println("Login failed:", err)
 			return "", err
 		}
+	} else {
+		// No 2FA password, success alone completes login, reset counter here.
+		if err := h.userService.ResetLoginAttempts(username); err != nil {
+			fmt.Println("Error reseting login attempts") // non fatal
+		}
 	}
 
 	log.Println(user)

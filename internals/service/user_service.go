@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
 	totp "github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth/auth-totp"
@@ -46,12 +47,33 @@ func (s *UserService) Authenticate(username, password string) (models.User, erro
 		return models.User{}, models.ErrInvalidCredentials
 	}
 
-	err = auth.CheckPassword(user.PasswordHash, password)
-
-	if err != nil {
+	// Check password lockout before even checking the password, if lockout is valid just return invalid credentials no matter what
+	if user.LockedUntil.Valid && time.Now().Before(user.LockedUntil.Time) {
+		fmt.Println("didnt even checked")
 		return models.User{}, models.ErrInvalidCredentials
 	}
 
+	if err := auth.CheckPassword(user.PasswordHash, password); err != nil {
+		count, incErr := s.repository.IncrementFailedAttempts(username)
+		if incErr != nil {
+			return models.User{}, models.ErrInvalidCredentials
+		}
+
+		if count >= auth.FailThreshold {
+			// add lockout
+			dur, level := auth.NextLockout(user.LastLockoutAt.Time, user.LockoutLevel)
+			_ = s.repository.LockUser(username, time.Now().Add(dur), level)
+		} else if count >= auth.WarnAfter {
+			// give user a warning
+			remaining := auth.FailThreshold - count
+			return models.User{}, fmt.Errorf("%w (warning: %d attempts remaining before lockout)",
+				models.ErrInvalidCredentials, remaining)
+		}
+
+		return models.User{}, models.ErrInvalidCredentials
+	}
+
+	// dont reset the counter for failed attempts yet, first make sure the 2FA passes (if any)
 	return user, nil
 }
 
@@ -107,10 +129,34 @@ func (s *UserService) VerifyTOTP(username string, code string) error {
 		return nil
 	}
 
-	if !s.totp.Validate(user.TOTPSecret, code) {
-		return errors.New("invalid authentication code")
+	// Check TOTP lockout, if there is lockout return a generic error, dont reveal password already succeeded.
+	if user.TOTPLockedUntil.Valid && time.Now().Before(user.TOTPLockedUntil.Time) {
+		return models.ErrInvalidCredentials
 	}
 
+	if !s.totp.Validate(user.TOTPSecret, code) {
+		count, incErr := s.repository.IncrementTOTPFailedAttempts(username)
+		if incErr != nil {
+			return models.ErrInvalidCredentials
+		}
+
+		if count >= auth.FailThreshold {
+			// failed attempt of TOTP
+			dur, level := auth.NextLockout(user.TOTPLastLockoutAt.Time, user.TOTPLockoutLevel)
+			_ = s.repository.LockTOTP(username, time.Now().Add(dur), level)
+		} else if count >= auth.WarnAfter {
+			// failed attempt of TOTP
+			remaining := auth.FailThreshold - count
+			return fmt.Errorf("%w (warning: %d attempts remaining before lockout)",
+				models.ErrInvalidCredentials, remaining)
+		}
+
+		return models.ErrInvalidCredentials
+	}
+
+	// full login success reset BOTH counters.
+	_ = s.repository.ResetFailedAttempts(username)
+	_ = s.repository.ResetTOTPFailedAttempts(username)
 	return nil
 }
 
@@ -130,4 +176,8 @@ func (s *UserService) DisableTOTP(username, password string) error {
 	}
 
 	return s.repository.UpdateTOTP(username, "", false)
+}
+
+func (s *UserService) ResetLoginAttempts(username string) error {
+	return s.repository.ResetFailedAttempts(username)
 }
