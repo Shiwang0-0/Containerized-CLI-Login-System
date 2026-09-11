@@ -32,7 +32,7 @@ func init() {
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 
-	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPassword, dbHost, dbPort, dbName)
+	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&loc=Asia%%2FKolkata", dbUser, dbPassword, dbHost, dbPort, dbName)
 
 	var err error
 	db, err = sql.Open("mysql", uri)
@@ -96,7 +96,7 @@ func main() {
 			promptLabel = "> "
 		} else {
 			p.SetPostLoginMode()
-			promptLabel = fmt.Sprintf("(%s) > ", currentSession.Username)
+			promptLabel = fmt.Sprintf("\n(%s) > ", currentSession.Username)
 		}
 
 		command, err := p.ReadLine(promptLabel)

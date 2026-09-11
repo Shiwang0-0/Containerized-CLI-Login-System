@@ -6,7 +6,7 @@ Note: the commands below are compatible with the .env.example, so for easy setup
 
 ```bash
 # start the sql in detach mode, and cli-app (the go application) in interactive terminal mode so that CLI can take input  
-docker compose up -d cli-sql;  
+docker compose up -d mysql;  
 docker compose run --rm cli-app;  
 ```
 
@@ -84,6 +84,12 @@ There is a base number of attemps that user can do (currently set to 5), after t
 
 This ensures that the account has a graceful increase in duration of lockout. We dont want immediate shut down of the account. similary we dont want infinte lock duration so there is a cap of 24hr after the last lockout after which the exponential level of the waiting resets.  
 Once the user successfully logs in (after TOTP if any) then the failure counters resets to 0.
+
+#### To actually see the lockout in action  
+1. Try using an invalid credential in login, after 3 attempts you will see the first warning.  
+2. at the same time in a seperate terminal run `docker compose exec mysql mysql -u cli_user -pcli_password cli_db;` and do `use cli_db` and then `select * from users`.
+3. In the users table you will see that the failed_attempts are non zero.  
+4. once you do 5 failed attemps, there will be a `locked_until` duration introduced. No matter if you put correct credentials before this duration it will be treated as invalid credential.  
 
 ### Session Management  
 1. User logged in and logged out status, with history of last login.
