@@ -1,9 +1,10 @@
 services:
-  mysql:
+  cli-sql:
     image: mysql:8.4
     container_name: cli-mysql
 
     environment:
+      TZ: Asia/Kolkata
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -14,6 +15,32 @@ services:
 
     volumes:
       - mysql_data:/var/lib/mysql
+    
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cli-app:
+    container_name: cli-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      cli-sql:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Kolkata
+      DB_HOST: cli-sql          # service name, not localhost
+      DB_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      TOTP_ISSUER: ${TOTP_ISSUER}
+      SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-15}
+    stdin_open: true   # keep STDIN open, required for interactive input
+    tty: true          # allocate a pseudo-TTY, required for readline to work correctly
 
 volumes:
   mysql_data:

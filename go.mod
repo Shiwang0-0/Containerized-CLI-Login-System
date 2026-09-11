@@ -10,7 +10,6 @@ require (
 	github.com/mdp/qrterminal v1.0.1
 	github.com/pquerna/otp v1.5.0
 	golang.org/x/crypto v0.57.0
-	golang.org/x/term v0.46.0
 )
 
 require (

@@ -21,9 +21,8 @@ var db *sql.DB
 
 func init() {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env")
+	if err := godotenv.Load(); err != nil {
+		// .env is optional (for docker)
 	}
 
 	dbUser := os.Getenv("MYSQL_USER")
@@ -34,7 +33,9 @@ func init() {
 
 	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPassword, dbHost, dbPort, dbName)
 
+	var err error
 	db, err = sql.Open("mysql", uri)
+
 	if err != nil {
 		log.Fatal(err)
 	}
