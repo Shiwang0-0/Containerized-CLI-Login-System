@@ -5,10 +5,10 @@ import (
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 )
 
 func (h *Handler) RegisterUser(p *prompt.Prompt) error {
-	fmt.Println("\n Register")
 
 	// reading the username and password and validating them
 	username := readLine(p, "Username: ", auth.ValidateUsername)
@@ -18,6 +18,6 @@ func (h *Handler) RegisterUser(p *prompt.Prompt) error {
 		return err
 	}
 
-	fmt.Println("Registration successful!")
+	fmt.Println(style.SuccessStyle.Render("Registration successful"))
 	return nil
 }

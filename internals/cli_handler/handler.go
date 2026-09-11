@@ -7,6 +7,7 @@ import (
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 )
 
 type Handler struct {
@@ -62,7 +63,7 @@ func (h *Handler) Whoami(sess *session.Session) error {
 		return err
 	}
 
-	fmt.Println("\n Account Details")
+	fmt.Println(style.TitleStyle.Render("\nAccount Details"))
 	fmt.Println("Username:        ", user.Username)
 	fmt.Println("Registered on:   ", user.CreatedAt.Format(time.RFC1123))
 	if user.TOTPEnabled {

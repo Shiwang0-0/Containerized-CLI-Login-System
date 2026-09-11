@@ -13,6 +13,7 @@ import (
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/repository"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -74,8 +75,10 @@ func main() {
 	}
 	defer p.Close()
 
-	fmt.Println("Welcome")
-	fmt.Printf("Session timeout: %s. Type 'help' to see available commands.\n", sessionTimeout)
+	fmt.Println(style.TitleStyle.Render("\n\nWelcome"))
+	fmt.Println(style.InfoStyle.Render(
+		fmt.Sprintf("Session timeout: %s. Type 'help' to see available commands.", sessionTimeout),
+	))
 
 	var currentSession *session.Session
 
@@ -99,10 +102,14 @@ func main() {
 		command, err := p.ReadLine(promptLabel)
 		if err != nil {
 			if err == prompt.ErrInterrupted {
-				continue // Ctrl+C: just re-show the prompt
+				fmt.Println(style.WarningStyle.Render(
+					"\nUse 'exit' or press Ctrl+D to exit.",
+				))
+				continue
 			}
+
 			// io.EOF (Ctrl+D) or real error: exit cleanly
-			fmt.Println("\nExiting...")
+			fmt.Println(style.InfoStyle.Render("\nExiting..."))
 			return
 		}
 
@@ -114,13 +121,13 @@ func main() {
 		if currentSession == nil {
 			switch command {
 			case "register":
-				fmt.Println("Register Screen")
+				fmt.Println(style.LabelStyle.Render("\nRegister Screen\n"))
 				if err := handler.RegisterUser(p); err != nil {
-					fmt.Println("Error:", err)
+					fmt.Println(style.ErrorStyle.Render("Error:", err.Error()))
 				}
 
 			case "login":
-				fmt.Println("Login Screen")
+				fmt.Println(style.LabelStyle.Render("\nLogin Screen\n"))
 				username, lastLogin, err := handler.LoginUser(p)
 				if err != nil {
 					fmt.Println("Error:", err)
@@ -129,11 +136,13 @@ func main() {
 				// as soon as login finished, create a new session
 				currentSession = session.New(username, sessionTimeout, lastLogin)
 				p.SetPostLoginMode() // after login, change the command mode
-				fmt.Printf("Session started. Expires at %s.\n",
-					currentSession.ExpiresAt.Format(time.Kitchen))
+				fmt.Printf(style.InfoStyle.Render(fmt.Sprintf(
+					"Session started. Expires at %s.\n",
+					currentSession.ExpiresAt.Format(time.Kitchen),
+				)))
 
 			case "help":
-				fmt.Println("\nAvailable commands:")
+				fmt.Println(style.InfoStyle.Render("\nAvailable commands:"))
 				fmt.Println("  register  - create a new user")
 				fmt.Println("  login     - login with username/password")
 				fmt.Println("  help      - show available commands")
@@ -141,14 +150,14 @@ func main() {
 				fmt.Println()
 
 			case "exit":
-				fmt.Println("Exiting...")
+				fmt.Println(style.WarningStyle.Render("Exiting..."))
 				return
 
 			case "":
 				continue
 
 			default:
-				fmt.Printf("Unknown command: %q. Type 'help' for available commands.\n", command)
+				fmt.Println(style.WarningStyle.Render(fmt.Sprintf("Unknown command: %q. Type 'help' for available commands.", command)))
 			}
 			continue
 		}
@@ -173,12 +182,15 @@ func main() {
 
 		case "logout":
 			// session end (explicit)
-			fmt.Printf("Logging out %s.\n", currentSession.Username)
+			fmt.Printf("%s %s\n",
+				style.SuccessStyle.Render("Logging out"),
+				style.InfoStyle.Render(currentSession.Username+"."),
+			)
 			currentSession = nil
 			p.SetPreLoginMode() // after log out change the mode
 
 		case "help":
-			fmt.Println("\nAvailable commands:")
+			fmt.Println(style.InfoStyle.Render("\nAvailable commands:"))
 			fmt.Println("  whoami       - show current user details")
 			fmt.Println("  enable-2fa   - turn on TOTP-based 2FA")
 			fmt.Println("  disable-2fa  - turn off TOTP-based 2FA")
@@ -194,7 +206,7 @@ func main() {
 			continue
 
 		default:
-			fmt.Printf("Unknown command: %q. Type 'help' for available commands.\n", command)
+			fmt.Println(style.WarningStyle.Render(fmt.Sprintf("Unknown command: %q. Type 'help' for available commands.", command)))
 		}
 	}
 }

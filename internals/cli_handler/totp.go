@@ -7,6 +7,7 @@ import (
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 	"github.com/mdp/qrterminal"
 )
 
@@ -36,7 +37,7 @@ func (h *Handler) EnableTOTP(p *prompt.Prompt, username string) error {
 		fmt.Println("  Type: Time-based, SHA1, 6 digits, 30s")
 	}
 
-	code := readLine(p, "Enter the 6-digit code to confirm: ", nil)
+	code := readLine(p, style.InfoStyle.Render("Enter the 6-digit code to confirm: "), nil)
 	code = strings.TrimSpace(code)
 
 	if err := h.userService.ConfirmTOTPSetup(username, code); err != nil {
@@ -49,13 +50,13 @@ func (h *Handler) EnableTOTP(p *prompt.Prompt, username string) error {
 }
 
 func (h *Handler) DisableTOTP(p *prompt.Prompt, username string) error {
-	password := readSecret(p, "Confirm password to disable 2FA: ", auth.ValidatePassword)
+	password := readSecret(p, style.InfoStyle.Render("Confirm password to disable 2FA: "), auth.ValidatePassword)
 
 	if err := h.userService.DisableTOTP(username, password); err != nil {
 		fmt.Println("Failed to disable 2FA:", err)
 		return err
 	}
 
-	fmt.Println("2FA disabled.")
+	fmt.Println(style.SuccessStyle.Render("2FA disabled."))
 	return nil
 }

@@ -1,7 +1,7 @@
 services:
-  cli-sql:
+  mysql:
     image: mysql:8.4
-    container_name: cli-mysql
+    container_name: mysql
 
     environment:
       TZ: Asia/Kolkata
@@ -28,11 +28,11 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      cli-sql:
+      mysql:
         condition: service_healthy
     environment:
       TZ: Asia/Kolkata
-      DB_HOST: cli-sql          # service name, not localhost
+      DB_HOST: mysql          # service name, not localhost
       DB_PORT: 3306
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}

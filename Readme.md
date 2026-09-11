@@ -1,24 +1,56 @@
-### Run SQL using docker compose
+### Setup  
+See the .env.example file in the root folder  
+Note: the commands below are compatible with the .env.example, so for easy setup just copy the same .env.example to .env file in the root folder.  
+
+#### Run using docker compose
 
 ```bash
-docker compose up
+# start the sql in detach mode, and cli-app (the go application) in interactive terminal mode so that CLI can take input  
+docker compose up -d cli-sql;  
+docker compose run --rm cli-app;  
+```
 
-# migrate
-migrate   -path ./migrations  -database "mysql://cli_user:cli_password@tcp(localhost:3307)/cli_db" up
+#### Run migration using go migration (Recommended)
+```bash
+# run the migration command
+migrate -path ./migrations  -database "mysql://cli_user:cli_password@tcp(localhost:3307)/cli_db" up
+# if you changed the .env file, change the username, password, port and database name in the URI too.
+```
 
-migrate -path ./migrations -database "mysql://cli_user:cli_password@tcp(localhost:3307)/cli_db" goto 4
+#### Run migration manually  
+1. Start the sql container `docker compose up -d mysql` 
+2. Wait for some time, make sure that on `docker compose ps` the status of mysql container is healthy  
+3. run the command
+```bash
 
+# Load env vars and apply migrations, in order
+
+source .env
+for f in $(ls migrations/*.sql | grep -v '.down.sql' | sort); do
+  echo "Applying $f..."
+  docker exec -i mysql mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$f"
+done
+```
+4. verify using the command: `docker exec -it mysql mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "DESCRIBE users;"`  
+
+5. Run the cli-app using `docker compose run --rm cli-app`
+
+#### shut down the containers  
+```bash
 docker compose down # volume still persist
 docker compose down -v # volume deleted
 
-# to view the running container
-docker compose ps
-
 # to run commands inside the container
-docker compose exec mysql mysql -u <user> -p<password> <db_name>
+docker compose exec mysql mysql -u cli_user -pcli_password cli_db
 ```
-Note: The migration command is present in the docker compose file itself, so write the migration into a new incremental file so that the previous data is still present in the volume and you dont have to delete the volume.
 
+--- 
+
+# Features
+
+### User Registration  
+1. User login and register functionality. Input validation using go-validator, persistent in MySQL database.
+2. Password hashed using Bcrypt
 
 ### TOTP 2FA Implementation
 After successful login, user will have a choice to `enable-2fa`.
@@ -28,7 +60,6 @@ User will get 2 choice
 
 Once 2FA is enabled, every time user tries to login, the 6 digit authentication code will be required to successfully login.  
 User can disable the 2FA using `disable-2fa` command, but only if the user is already logged in and knows the password.  
-
 
 ### Account Lockout Implementation  
 There are two counters for failed attempts. `FailedAttempts` for wrong password guess and `TOTPFailedAttempts` for wrong 2FA code guess. 
@@ -53,6 +84,19 @@ There is a base number of attemps that user can do (currently set to 5), after t
 
 This ensures that the account has a graceful increase in duration of lockout. We dont want immediate shut down of the account. similary we dont want infinte lock duration so there is a cap of 24hr after the last lockout after which the exponential level of the waiting resets.  
 Once the user successfully logs in (after TOTP if any) then the failure counters resets to 0.
+
+### Session Management  
+1. User logged in and logged out status, with history of last login.
+2. Displaying user info using `whoami` command (username, 2fa enabled, last login, session expiration time) once the user is loggedin. 
+3. Deleting the session once the user logs out. 
+
+### Command line history and tab completion
+A dynamic prompt/line reader that allows auto tab completion and history of previous commands with use of `github.com/chzyer/readline` library.
+
+### Help command
+Dynamic help command output, based on user session (weather the user is logged in or not).  
+
+---
 
 # Some good practices that I followed
 
@@ -98,3 +142,7 @@ func init() {
 	})
 }
 ```
+
+### Containerization 
+Both the cli app and mysql are containerized with volumne persistence for mysql.  
+

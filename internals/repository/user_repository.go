@@ -24,7 +24,6 @@ func (r *UserRepository) Create(user models.User) error {
 		user.Username, user.PasswordHash, // created at time is automatically set by the database
 	)
 	if err != nil {
-		// TODO: detect duplicate-key error specifically and return auth.ErrUsernameTaken
 		return err
 	}
 	return nil

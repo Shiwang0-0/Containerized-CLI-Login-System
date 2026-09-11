@@ -9,6 +9,7 @@ import (
 	totp "github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth/auth-totp"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/models"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/repository"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 )
 
 type UserService struct {
@@ -36,6 +37,9 @@ func (s *UserService) Register(username, password string) (models.User, error) {
 	}
 
 	if err := s.repository.Create(user); err != nil {
+		if models.IsDuplicateKeyError(err) {
+			return models.User{}, errors.New("username already exists")
+		}
 		return models.User{}, err
 	}
 	return user, nil
@@ -83,7 +87,7 @@ func (s *UserService) StartTOTPSetup(username string) (string, string, error) {
 		return "", "", err
 	}
 	if user.TOTPEnabled {
-		return "", "", errors.New("2FA already enabled, disable it first to re-enroll")
+		return "", "", errors.New(style.InfoStyle.Render("2FA already enabled, disable it first to re-enroll"))
 	}
 
 	key, err := s.totp.GenerateSecret(user.Username)

@@ -6,10 +6,10 @@ import (
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 )
 
 func (h *Handler) LoginUser(p *prompt.Prompt) (username string, lastLogin *time.Time, err error) {
-	fmt.Println("\nLogin")
 
 	username = readLine(p, "Username: ", auth.ValidateUsername)
 	password := readSecret(p, "Password: ", auth.ValidatePassword)
@@ -21,11 +21,11 @@ func (h *Handler) LoginUser(p *prompt.Prompt) (username string, lastLogin *time.
 
 	// once username and password are valid, ask for TOTP and verify it
 	if user.TOTPEnabled {
-		fmt.Print("Authenticator code: ")
+		fmt.Print(style.PromptStyle.Render("Authenticator code: "))
 
 		code := readLine(p, "Authenticator code: ", nil)
 		if err := h.userService.VerifyTOTP(username, code); err != nil {
-			fmt.Println("Login failed:", err)
+			fmt.Println(style.ErrorStyle.Render("Login failed:"), err)
 			return "", nil, err
 		}
 	} else {
@@ -44,7 +44,7 @@ func (h *Handler) LoginUser(p *prompt.Prompt) (username string, lastLogin *time.
 
 	_ = h.userService.RecordLogin(username)
 
-	fmt.Println("Login successful.")
+	fmt.Println(style.SuccessStyle.Render("Login successful"))
 
 	// create session on successfull login
 	return username, prevLogin, nil
