@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
@@ -60,4 +61,29 @@ func readSecret(label string, validate ValidateFunc) string {
 		}
 		return value
 	}
+}
+
+func (h *Handler) Whoami(sess *session.Session) error {
+	user, err := h.userService.GetByUsername(sess.Username)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("\n Account Details")
+	fmt.Println("Username:        ", user.Username)
+	fmt.Println("Registered on:   ", user.CreatedAt.Format(time.RFC1123))
+	if user.TOTPEnabled {
+		fmt.Println("MFA status:       enabled")
+	} else {
+		fmt.Println("MFA status:       disabled")
+	}
+	if sess.LastLoginAt != nil {
+		fmt.Println("Last login:      ", sess.LastLoginAt.Format(time.RFC1123))
+	} else {
+		fmt.Println("Last login:       this is your first login")
+	}
+	fmt.Println("Session expires: ", sess.ExpiresAt.Format(time.RFC1123),
+		fmt.Sprintf("(%s remaining)", sess.TimeRemaining().Round(time.Second)))
+	fmt.Println()
+	return nil
 }

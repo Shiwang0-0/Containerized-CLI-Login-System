@@ -22,4 +22,6 @@ type User struct {
 	TOTPLockedUntil    sql.NullTime
 	TOTPLockoutLevel   int // the number of times you failed to guess, the waiting time increases exponentially then
 	TOTPLastLockoutAt  sql.NullTime
+
+	LastLoginAt sql.NullTime
 }

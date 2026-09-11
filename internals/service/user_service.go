@@ -181,3 +181,15 @@ func (s *UserService) DisableTOTP(username, password string) error {
 func (s *UserService) ResetLoginAttempts(username string) error {
 	return s.repository.ResetFailedAttempts(username)
 }
+
+func (s *UserService) RecordLogin(username string) error {
+	return s.repository.UpdateLastLogin(username, time.Now())
+}
+
+func (s *UserService) GetByUsername(username string) (models.User, error) {
+	user, err := s.repository.FindByUsername(username)
+	if err != nil {
+		return models.User{}, models.ErrInvalidCredentials
+	}
+	return user, nil
+}

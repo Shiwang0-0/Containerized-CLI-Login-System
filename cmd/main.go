@@ -13,6 +13,7 @@ import (
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/cli_handler"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/repository"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -65,18 +66,26 @@ func main() {
 	userService := service.NewUserService(userRepository, totpService)
 	handler := cli_handler.NewHandler(userService)
 
+	sessionTimeout := session.SessionTimeout()
+
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println("Welcome")
-	fmt.Println("Type 'help' to see available commands.")
+	fmt.Printf("Session timeout: %s. Type 'help' to see available commands.\n", sessionTimeout)
 
-	var currentUser string // empty string means not loggedin
+	var currentSession *session.Session
 
 	for {
-		if currentUser == "" {
+
+		if currentSession != nil && currentSession.IsExpired() {
+			fmt.Println("\nYour session has expired due to inactivity. Please log in again.")
+			currentSession = nil
+		}
+
+		if currentSession == nil {
 			fmt.Print("> ")
 		} else {
-			fmt.Printf("(%s) > ", currentUser)
+			fmt.Printf("(%s) > ", currentSession.Username)
 		}
 
 		input, err := reader.ReadString('\n')
@@ -87,7 +96,7 @@ func main() {
 		command := strings.TrimSpace(strings.ToLower(input))
 
 		// pre login commands
-		if currentUser == "" {
+		if currentSession == nil {
 			switch command {
 			case "register":
 				fmt.Println("Register Screen")
@@ -97,12 +106,15 @@ func main() {
 
 			case "login":
 				fmt.Println("Login Screen")
-				username, err := handler.LoginUser(reader)
+				username, lastLogin, err := handler.LoginUser(reader)
 				if err != nil {
 					fmt.Println("Error:", err)
 					continue
 				}
-				currentUser = username
+				// as soon as login finished, create a new session
+				currentSession = session.New(username, sessionTimeout, lastLogin)
+				fmt.Printf("Session started. Expires at %s.\n",
+					currentSession.ExpiresAt.Format(time.Kitchen))
 
 			case "help":
 				fmt.Println("\nAvailable commands:")
@@ -126,26 +138,35 @@ func main() {
 		}
 
 		// post login commands
+		// any validate command post login, refreshes the current session
+		currentSession.Refresh(sessionTimeout)
 		switch command {
+		case "whoami":
+			if err := handler.Whoami(currentSession); err != nil {
+				fmt.Println("Error:", err)
+			}
 		case "enable-2fa":
-			if err := handler.EnableTOTP(reader, currentUser); err != nil {
+			if err := handler.EnableTOTP(reader, currentSession.Username); err != nil {
 				fmt.Println("Error:", err)
 			}
 
 		case "disable-2fa":
-			if err := handler.DisableTOTP(reader, currentUser); err != nil {
+			if err := handler.DisableTOTP(reader, currentSession.Username); err != nil {
 				fmt.Println("Error:", err)
 			}
 
 		case "logout":
-			fmt.Println("Logging out.")
-			currentUser = ""
+			// session end (explicit)
+			fmt.Printf("Logging out %s.\n", currentSession.Username)
+			currentSession = nil
 
 		case "help":
 			fmt.Println("\nAvailable commands:")
+			fmt.Println("  whoami       - show current user details")
 			fmt.Println("  enable-2fa   - turn on TOTP-based 2FA")
 			fmt.Println("  disable-2fa  - turn off TOTP-based 2FA")
 			fmt.Println("  logout       - end session")
+			fmt.Println("  help         - show available commands")
 			fmt.Println("  exit         - quit program")
 
 		case "exit":

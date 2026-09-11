@@ -35,14 +35,14 @@ func (r *UserRepository) FindByUsername(username string) (models.User, error) {
 	query := `SELECT  username, password_hash, created_at,
 	            totp_secret, totp_enabled,
 	            failed_attempts, locked_until, lockout_level, last_lockout_at,
-	            totp_failed_attempts, totp_locked_until, totp_lockout_level, totp_last_lockout_at
+	            totp_failed_attempts, totp_locked_until, totp_lockout_level, totp_last_lockout_at, last_login_at 
 	          	FROM users WHERE username = ?`
 
 	err := r.db.QueryRow(query, username).Scan(
 		&u.Username, &u.PasswordHash, &u.CreatedAt,
 		&u.TOTPSecret, &u.TOTPEnabled,
 		&u.FailedAttempts, &u.LockedUntil, &u.LockoutLevel, &u.LastLockoutAt,
-		&u.TOTPFailedAttempts, &u.TOTPLockedUntil, &u.TOTPLockoutLevel, &u.TOTPLastLockoutAt,
+		&u.TOTPFailedAttempts, &u.TOTPLockedUntil, &u.TOTPLockoutLevel, &u.TOTPLastLockoutAt, &u.LastLoginAt,
 	)
 	if err != nil {
 		return models.User{}, err
@@ -125,5 +125,10 @@ func (r *UserRepository) LockTOTP(username string, until time.Time, level int) e
 		`UPDATE users SET totp_locked_until = ?, totp_lockout_level = ?, totp_last_lockout_at = ?, totp_failed_attempts = 0 WHERE username = ?`,
 		until, level, time.Now(), username,
 	)
+	return err
+}
+
+func (r *UserRepository) UpdateLastLogin(username string, t time.Time) error {
+	_, err := r.db.Exec(`UPDATE users SET last_login_at = ? WHERE username = ?`, t, username)
 	return err
 }
