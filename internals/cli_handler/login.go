@@ -1,20 +1,18 @@
 package cli_handler
 
 import (
-	"bufio"
 	"fmt"
-	"log"
-	"strings"
 	"time"
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 )
 
-func (h *Handler) LoginUser(reader *bufio.Reader) (username string, lastLogin *time.Time, err error) {
+func (h *Handler) LoginUser(p *prompt.Prompt) (username string, lastLogin *time.Time, err error) {
 	fmt.Println("\nLogin")
 
-	username = readLine(reader, "Username: ", auth.ValidateUsername)
-	password := readSecret("Password: ", auth.ValidatePassword)
+	username = readLine(p, "Username: ", auth.ValidateUsername)
+	password := readSecret(p, "Password: ", auth.ValidatePassword)
 
 	user, err := h.userService.Authenticate(username, password)
 	if err != nil {
@@ -25,9 +23,7 @@ func (h *Handler) LoginUser(reader *bufio.Reader) (username string, lastLogin *t
 	if user.TOTPEnabled {
 		fmt.Print("Authenticator code: ")
 
-		code, _ := reader.ReadString('\n')
-		code = strings.TrimSpace(code)
-
+		code := readLine(p, "Authenticator code: ", nil)
 		if err := h.userService.VerifyTOTP(username, code); err != nil {
 			fmt.Println("Login failed:", err)
 			return "", nil, err
@@ -48,7 +44,7 @@ func (h *Handler) LoginUser(reader *bufio.Reader) (username string, lastLogin *t
 
 	_ = h.userService.RecordLogin(username)
 
-	log.Println(user)
+	fmt.Println("Login successful.")
 
 	// create session on successfull login
 	return username, prevLogin, nil

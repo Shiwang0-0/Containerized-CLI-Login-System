@@ -1,15 +1,12 @@
 package cli_handler
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
-	"golang.org/x/term"
 )
 
 type Handler struct {
@@ -25,41 +22,37 @@ func NewHandler(userService *service.UserService) *Handler {
 type ValidateFunc func(string) error
 
 // ReadLine prompts on stdin until input passes validate.
-func readLine(reader *bufio.Reader, label string, validate ValidateFunc) string {
+func readLine(p *prompt.Prompt, label string, validate func(string) error) string {
 	for {
-		fmt.Print(label)
-		input, err := reader.ReadString('\n') // visible input while typing
+		val, err := p.ReadLine(label)
 		if err != nil {
-			fmt.Println("Error reading input:", err)
+			// treat EOF/interrupt as empty input for now; caller loops will re-prompt
 			continue
 		}
-
-		value := strings.TrimSpace(input)
-		if err := validate(value); err != nil {
-			fmt.Println("Error:", err)
-			continue
+		if validate != nil {
+			if verr := validate(val); verr != nil {
+				fmt.Println("Invalid input:", verr)
+				continue
+			}
 		}
-		return value
+		return val
 	}
 }
 
 // ReadSecret prompts for passwords until it is validated
-func readSecret(label string, validate ValidateFunc) string {
+func readSecret(p *prompt.Prompt, label string, validate func(string) error) string {
 	for {
-		fmt.Print(label)
-		valueBytes, err := term.ReadPassword(int(os.Stdin.Fd())) // hidden input while typing
-		fmt.Println()
+		val, err := p.ReadPassword(label)
 		if err != nil {
-			fmt.Println("Error reading input:", err)
 			continue
 		}
-
-		value := string(valueBytes)
-		if err := validate(value); err != nil {
-			fmt.Println("Error:", err)
-			continue
+		if validate != nil {
+			if verr := validate(val); verr != nil {
+				fmt.Println("Invalid input:", verr)
+				continue
+			}
 		}
-		return value
+		return val
 	}
 }
 

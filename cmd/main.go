@@ -1,16 +1,15 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	totp "github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth/auth-totp"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/cli_handler"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/repository"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
@@ -68,7 +67,11 @@ func main() {
 
 	sessionTimeout := session.SessionTimeout()
 
-	reader := bufio.NewReader(os.Stdin)
+	p, err := prompt.New()
+	if err != nil {
+		log.Fatal("Failed to start CLI prompt:", err)
+	}
+	defer p.Close()
 
 	fmt.Println("Welcome")
 	fmt.Printf("Session timeout: %s. Type 'help' to see available commands.\n", sessionTimeout)
@@ -80,39 +83,51 @@ func main() {
 		if currentSession != nil && currentSession.IsExpired() {
 			fmt.Println("\nYour session has expired due to inactivity. Please log in again.")
 			currentSession = nil
+			p.SetPreLoginMode()
 		}
 
+		var promptLabel string
 		if currentSession == nil {
-			fmt.Print("> ")
+			p.SetPreLoginMode()
+			promptLabel = "> "
 		} else {
-			fmt.Printf("(%s) > ", currentSession.Username)
+			p.SetPostLoginMode()
+			promptLabel = fmt.Sprintf("(%s) > ", currentSession.Username)
 		}
 
-		input, err := reader.ReadString('\n')
+		command, err := p.ReadLine(promptLabel)
 		if err != nil {
+			if err == prompt.ErrInterrupted {
+				continue // Ctrl+C: just re-show the prompt
+			}
+			// io.EOF (Ctrl+D) or real error: exit cleanly
+			fmt.Println("\nExiting...")
 			return
 		}
 
-		command := strings.TrimSpace(strings.ToLower(input))
+		if command == "" {
+			continue
+		}
 
 		// pre login commands
 		if currentSession == nil {
 			switch command {
 			case "register":
 				fmt.Println("Register Screen")
-				if err := handler.RegisterUser(reader); err != nil {
+				if err := handler.RegisterUser(p); err != nil {
 					fmt.Println("Error:", err)
 				}
 
 			case "login":
 				fmt.Println("Login Screen")
-				username, lastLogin, err := handler.LoginUser(reader)
+				username, lastLogin, err := handler.LoginUser(p)
 				if err != nil {
 					fmt.Println("Error:", err)
 					continue
 				}
 				// as soon as login finished, create a new session
 				currentSession = session.New(username, sessionTimeout, lastLogin)
+				p.SetPostLoginMode() // after login, change the command mode
 				fmt.Printf("Session started. Expires at %s.\n",
 					currentSession.ExpiresAt.Format(time.Kitchen))
 
@@ -146,12 +161,12 @@ func main() {
 				fmt.Println("Error:", err)
 			}
 		case "enable-2fa":
-			if err := handler.EnableTOTP(reader, currentSession.Username); err != nil {
+			if err := handler.EnableTOTP(p, currentSession.Username); err != nil {
 				fmt.Println("Error:", err)
 			}
 
 		case "disable-2fa":
-			if err := handler.DisableTOTP(reader, currentSession.Username); err != nil {
+			if err := handler.DisableTOTP(p, currentSession.Username); err != nil {
 				fmt.Println("Error:", err)
 			}
 
@@ -159,6 +174,7 @@ func main() {
 			// session end (explicit)
 			fmt.Printf("Logging out %s.\n", currentSession.Username)
 			currentSession = nil
+			p.SetPreLoginMode() // after log out change the mode
 
 		case "help":
 			fmt.Println("\nAvailable commands:")

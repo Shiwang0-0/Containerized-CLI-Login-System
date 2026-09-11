@@ -3,6 +3,7 @@ module github.com/Shiwang0-0/Containerized-CLI-Login-System
 go 1.26.6
 
 require (
+	github.com/chzyer/readline v1.5.1
 	github.com/go-playground/validator/v10 v10.30.4
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/joho/godotenv v1.5.1

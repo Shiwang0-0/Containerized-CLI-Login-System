@@ -1,18 +1,18 @@
 package cli_handler
 
 import (
-	"bufio"
 	"fmt"
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 )
 
-func (h *Handler) RegisterUser(reader *bufio.Reader) error {
+func (h *Handler) RegisterUser(p *prompt.Prompt) error {
 	fmt.Println("\n Register")
 
 	// reading the username and password and validating them
-	username := readLine(reader, "Username: ", auth.ValidateUsername)
-	password := readSecret("Password: ", auth.ValidatePassword)
+	username := readLine(p, "Username: ", auth.ValidateUsername)
+	password := readSecret(p, "Password: ", auth.ValidatePassword)
 
 	if _, err := h.userService.Register(username, password); err != nil {
 		return err

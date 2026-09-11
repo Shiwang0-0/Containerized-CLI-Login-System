@@ -1,16 +1,16 @@
 package cli_handler
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/mdp/qrterminal"
 )
 
-func (h *Handler) EnableTOTP(reader *bufio.Reader, username string) error {
+func (h *Handler) EnableTOTP(p *prompt.Prompt, username string) error {
 	secret, url, err := h.userService.StartTOTPSetup(username)
 	if err != nil {
 		return err
@@ -21,8 +21,7 @@ func (h *Handler) EnableTOTP(reader *bufio.Reader, username string) error {
 	fmt.Println("  2) Enter key manually")
 	fmt.Print("Choice: ")
 
-	choice, _ := reader.ReadString('\n')
-	choice = strings.TrimSpace(choice)
+	choice := readLine(p, "Choice: ", nil)
 
 	switch choice {
 	case "1":
@@ -37,8 +36,7 @@ func (h *Handler) EnableTOTP(reader *bufio.Reader, username string) error {
 		fmt.Println("  Type: Time-based, SHA1, 6 digits, 30s")
 	}
 
-	fmt.Print("\nEnter the 6-digit code to confirm: ")
-	code, _ := reader.ReadString('\n')
+	code := readLine(p, "Enter the 6-digit code to confirm: ", nil)
 	code = strings.TrimSpace(code)
 
 	if err := h.userService.ConfirmTOTPSetup(username, code); err != nil {
@@ -50,8 +48,8 @@ func (h *Handler) EnableTOTP(reader *bufio.Reader, username string) error {
 	return nil
 }
 
-func (h *Handler) DisableTOTP(reader *bufio.Reader, username string) error {
-	password := readSecret("Confirm password to disable 2FA: ", auth.ValidatePassword)
+func (h *Handler) DisableTOTP(p *prompt.Prompt, username string) error {
+	password := readSecret(p, "Confirm password to disable 2FA: ", auth.ValidatePassword)
 
 	if err := h.userService.DisableTOTP(username, password); err != nil {
 		fmt.Println("Failed to disable 2FA:", err)
