@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth/jwt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/models"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/vault"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/style"
 )
 
 type Handler struct {
 	userService *service.UserService
-	session     *session.Session
+	jwtService  *jwt.JWTService
+	vault       *vault.Vault
 }
 
-func NewHandler(userService *service.UserService) *Handler {
-	return &Handler{userService: userService}
+func NewHandler(userService *service.UserService, jwtService *jwt.JWTService, vault *vault.Vault) *Handler {
+	return &Handler{userService: userService, jwtService: jwtService, vault: vault}
 }
 
 // ValidateFunc validates a single piece of input.

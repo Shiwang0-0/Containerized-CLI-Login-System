@@ -7,6 +7,7 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/go-playground/validator/v10 v10.30.4
 	github.com/go-sql-driver/mysql v1.10.1
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/joho/godotenv v1.5.1
 	github.com/mdp/qrterminal v1.0.1
 	github.com/pquerna/otp v1.5.0

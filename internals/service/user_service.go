@@ -14,10 +14,10 @@ import (
 
 type UserService struct {
 	repository *repository.UserRepository
-	totp       *totp.Service
+	totp       *totp.TOTPService
 }
 
-func NewUserService(repository *repository.UserRepository, totpService *totp.Service) *UserService {
+func NewUserService(repository *repository.UserRepository, totpService *totp.TOTPService) *UserService {
 	return &UserService{
 		repository: repository,
 		totp:       totpService,

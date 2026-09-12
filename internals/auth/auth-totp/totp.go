@@ -5,17 +5,17 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
-type Service struct {
+type TOTPService struct {
 	issuer string
 }
 
-func NewService(issuer string) *Service {
-	return &Service{
+func NewTOTPService(issuer string) *TOTPService {
+	return &TOTPService{
 		issuer: issuer,
 	}
 }
 
-func (s *Service) GenerateSecret(username string) (*otp.Key, error) {
+func (s *TOTPService) GenerateSecret(username string) (*otp.Key, error) {
 	return totp.Generate(totp.GenerateOpts{
 		Issuer:      s.issuer,
 		AccountName: username,
@@ -25,6 +25,6 @@ func (s *Service) GenerateSecret(username string) (*otp.Key, error) {
 	})
 }
 
-func (s *Service) Validate(secret, code string) bool {
+func (s *TOTPService) Validate(secret, code string) bool {
 	return totp.Validate(code, secret)
 }

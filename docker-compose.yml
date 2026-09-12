@@ -39,8 +39,13 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       TOTP_ISSUER: ${TOTP_ISSUER}
       SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-15}
+    
+    volumes:
+      - clilogin_data:/root/.clilogin # to store the jwt token that was created, so it persist across container re-builds and restarts
+
     stdin_open: true   # keep STDIN open, required for interactive input
     tty: true          # allocate a pseudo-TTY, required for readline to work correctly
 
 volumes:
   mysql_data:
+  clilogin_data:

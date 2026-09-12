@@ -96,6 +96,18 @@ Once the user successfully logs in (after TOTP if any) then the failure counters
 2. Displaying user info using `whoami` command (username, 2fa enabled, last login, session expiration time) once the user is loggedin. 
 3. Deleting the session once the user logs out. 
 
+#### mainting session across terminal sessions  
+On successful login, a JWT is created that is stored in the docker volume ( on the ~/.clilogin ) folder. 
+```bash
+docker exec -it <container_name_or_id> sh  
+cd ~/.clilogin/
+ls -a
+history token .jwtkey
+# history stores the command history
+# token stores the JWT token ( attached to volumne, so is persisted across container restarts)
+```
+This JWT will be reused if the user closes this session and restart the application again (provided it is not expired).  
+
 ### Command line history and tab completion
 A dynamic prompt/line reader that allows auto tab completion and history of previous commands with use of `github.com/chzyer/readline` library.
 
