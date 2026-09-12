@@ -95,31 +95,30 @@ func (s *UserService) StartTOTPSetup(username string) (string, string, error) {
 		return "", "", err
 	}
 
-	secret := key.Secret()
-	if err := s.repository.UpdateTOTP(user.Username, secret, false); err != nil {
-		return "", "", err
-	}
-	return secret, key.URL(), nil // secret for manual entry, URL for QR
+	return key.Secret(), key.URL(), nil // secret for manual entry, URL for QR not persisted (user might press ctrl + D before confirming the setup)
 }
 
-func (s *UserService) ConfirmTOTPSetup(username string, code string) error {
+func (s *UserService) ConfirmTOTPSetup(username, secret, code string) error {
 
 	user, err := s.repository.FindByUsername(username)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(user.TOTPSecret)
-
-	if user.TOTPSecret == "" {
-		return errors.New("TOTP setup has not been started")
+	if user.TOTPEnabled {
+		return errors.New(style.InfoStyle.Render("2FA already enabled"))
 	}
 
-	if !s.totp.Validate(user.TOTPSecret, code) {
+	if !s.totp.Validate(secret, code) {
 		return errors.New("invalid authentication code")
 	}
 
-	return s.repository.UpdateTOTP(user.Username, user.TOTPSecret, true)
+	// only touch the DB once verification succeeds
+	if err := s.repository.UpdateTOTP(user.Username, secret, true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *UserService) VerifyTOTP(username string, code string) error {

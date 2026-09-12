@@ -11,8 +11,15 @@ import (
 func (h *Handler) RegisterUser(p *prompt.Prompt) error {
 
 	// reading the username and password and validating them
-	username := readLine(p, "Username: ", auth.ValidateUsername)
-	password := readSecret(p, "Password: ", auth.ValidatePassword)
+	username, err := readLine(p, "Username: ", auth.ValidateUsername)
+	if err != nil {
+		return err
+	}
+
+	password, err := readSecret(p, "Password: ", auth.ValidatePassword)
+	if err != nil {
+		return err
+	}
 
 	if _, err := h.userService.Register(username, password); err != nil {
 		return err

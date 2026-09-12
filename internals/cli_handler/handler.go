@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/models"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/session"
@@ -23,12 +24,12 @@ func NewHandler(userService *service.UserService) *Handler {
 type ValidateFunc func(string) error
 
 // ReadLine prompts on stdin until input passes validate.
-func readLine(p *prompt.Prompt, label string, validate func(string) error) string {
+func readLine(p *prompt.Prompt, label string, validate func(string) error) (string, error) {
 	for {
-		val, err := p.ReadLine(label)
+		val, err := p.ReadLineSensitive(label)
 		if err != nil {
-			// treat EOF/interrupt as empty input for now; caller loops will re-prompt
-			continue
+			// Ctrl+C or Ctrl+D: cancel this flow
+			return "", models.ErrAborted
 		}
 		if validate != nil {
 			if verr := validate(val); verr != nil {
@@ -36,16 +37,16 @@ func readLine(p *prompt.Prompt, label string, validate func(string) error) strin
 				continue
 			}
 		}
-		return val
+		return val, nil
 	}
 }
 
 // ReadSecret prompts for passwords until it is validated
-func readSecret(p *prompt.Prompt, label string, validate func(string) error) string {
+func readSecret(p *prompt.Prompt, label string, validate func(string) error) (string, error) {
 	for {
 		val, err := p.ReadPassword(label)
 		if err != nil {
-			continue
+			return "", models.ErrAborted
 		}
 		if validate != nil {
 			if verr := validate(val); verr != nil {
@@ -53,7 +54,7 @@ func readSecret(p *prompt.Prompt, label string, validate func(string) error) str
 				continue
 			}
 		}
-		return val
+		return val, nil
 	}
 }
 

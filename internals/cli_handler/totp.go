@@ -20,9 +20,11 @@ func (h *Handler) EnableTOTP(p *prompt.Prompt, username string) error {
 	fmt.Println("\nHow would you like to set up 2FA?")
 	fmt.Println("  1) Scan QR code")
 	fmt.Println("  2) Enter key manually")
-	fmt.Print("Choice: ")
 
-	choice := readLine(p, "Choice: ", nil)
+	choice, err := readLine(p, "Choice: ", nil)
+	if err != nil {
+		return err
+	}
 
 	switch choice {
 	case "1":
@@ -37,10 +39,13 @@ func (h *Handler) EnableTOTP(p *prompt.Prompt, username string) error {
 		fmt.Println("  Type: Time-based, SHA1, 6 digits, 30s")
 	}
 
-	code := readLine(p, style.InfoStyle.Render("Enter the 6-digit code to confirm: "), nil)
+	code, err := readLine(p, style.InfoStyle.Render("Enter the 6-digit code to confirm: "), nil)
+	if err != nil {
+		return err
+	}
 	code = strings.TrimSpace(code)
 
-	if err := h.userService.ConfirmTOTPSetup(username, code); err != nil {
+	if err := h.userService.ConfirmTOTPSetup(username, secret, code); err != nil {
 		fmt.Println("2FA setup failed:", err)
 		return err
 	}
@@ -50,7 +55,10 @@ func (h *Handler) EnableTOTP(p *prompt.Prompt, username string) error {
 }
 
 func (h *Handler) DisableTOTP(p *prompt.Prompt, username string) error {
-	password := readSecret(p, style.InfoStyle.Render("Confirm password to disable 2FA: "), auth.ValidatePassword)
+	password, err := readSecret(p, style.InfoStyle.Render("Confirm password to disable 2FA: "), auth.ValidatePassword)
+	if err != nil {
+		return err
+	}
 
 	if err := h.userService.DisableTOTP(username, password); err != nil {
 		fmt.Println("Failed to disable 2FA:", err)

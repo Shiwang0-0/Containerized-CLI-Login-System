@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	totp "github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/auth/auth-totp"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/cli_handler"
+	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/models"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/prompt"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/repository"
 	"github.com/Shiwang0-0/Containerized-CLI-Login-System/internals/service"
@@ -77,38 +79,24 @@ func main() {
 
 	fmt.Println(style.TitleStyle.Render("\n\nWelcome"))
 	fmt.Println(style.InfoStyle.Render(
-		fmt.Sprintf("Session timeout: %s. Type 'help' to see available commands.", sessionTimeout),
+		fmt.Sprintf("Session timeout configured: %s. Type 'help' to see available commands.", sessionTimeout),
 	))
 
 	var currentSession *session.Session
 
 	for {
-
-		if currentSession != nil && currentSession.IsExpired() {
-			fmt.Println("\nYour session has expired due to inactivity. Please log in again.")
-			currentSession = nil
-			p.SetPreLoginMode()
-		}
-
 		var promptLabel string
 		if currentSession == nil {
 			p.SetPreLoginMode()
 			promptLabel = "> "
 		} else {
 			p.SetPostLoginMode()
-			promptLabel = fmt.Sprintf("\n(%s) > ", currentSession.Username)
+			promptLabel = fmt.Sprintf("(%s) > ", currentSession.Username)
 		}
 
 		command, err := p.ReadLine(promptLabel)
 		if err != nil {
-			if err == prompt.ErrInterrupted {
-				fmt.Println(style.WarningStyle.Render(
-					"\nUse 'exit' or press Ctrl+D to exit.",
-				))
-				continue
-			}
-
-			// io.EOF (Ctrl+D) or real error: exit cleanly
+			// Ctrl+C or Ctrl+D at the top-level prompt
 			fmt.Println(style.InfoStyle.Render("\nExiting..."))
 			return
 		}
@@ -117,20 +105,35 @@ func main() {
 			continue
 		}
 
+		if currentSession != nil && currentSession.IsExpired() {
+			fmt.Println("\nYour session has expired due to inactivity. Please log in again.")
+			currentSession = nil
+			p.SetPreLoginMode()
+			continue // re-loop so this command isn't processed as a post-login command
+		}
+
 		// pre login commands
 		if currentSession == nil {
 			switch command {
 			case "register":
 				fmt.Println(style.LabelStyle.Render("\nRegister Screen\n"))
 				if err := handler.RegisterUser(p); err != nil {
-					fmt.Println(style.ErrorStyle.Render("Error:", err.Error()))
+					if errors.Is(err, models.ErrAborted) {
+						fmt.Println(style.WarningStyle.Render("\nRegistration cancelled."))
+					} else {
+						fmt.Println(style.ErrorStyle.Render("Error:", err.Error()))
+					}
 				}
 
 			case "login":
-				fmt.Println(style.LabelStyle.Render("\nLogin Screen\n"))
+				fmt.Println(style.LabelStyle.Render("\nLogin Screen"))
 				username, lastLogin, err := handler.LoginUser(p)
 				if err != nil {
-					fmt.Println("Error:", err)
+					if errors.Is(err, models.ErrAborted) {
+						fmt.Println(style.WarningStyle.Render("\nLogin cancelled."))
+					} else {
+						fmt.Println("Error:", err)
+					}
 					continue
 				}
 				// as soon as login finished, create a new session
@@ -172,12 +175,20 @@ func main() {
 			}
 		case "enable-2fa":
 			if err := handler.EnableTOTP(p, currentSession.Username); err != nil {
-				fmt.Println("Error:", err)
+				if errors.Is(err, models.ErrAborted) {
+					fmt.Println(style.WarningStyle.Render("\n2FA setup cancelled."))
+				} else {
+					fmt.Println(style.ErrorStyle.Render("Error:", err.Error()))
+				}
 			}
 
 		case "disable-2fa":
 			if err := handler.DisableTOTP(p, currentSession.Username); err != nil {
-				fmt.Println("Error:", err)
+				if errors.Is(err, models.ErrAborted) {
+					fmt.Println(style.WarningStyle.Render("\n2FA disable cancelled."))
+				} else {
+					fmt.Println(style.ErrorStyle.Render("Error:", err.Error()))
+				}
 			}
 
 		case "logout":

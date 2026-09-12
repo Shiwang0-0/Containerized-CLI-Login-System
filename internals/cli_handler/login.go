@@ -11,8 +11,15 @@ import (
 
 func (h *Handler) LoginUser(p *prompt.Prompt) (username string, lastLogin *time.Time, err error) {
 
-	username = readLine(p, "Username: ", auth.ValidateUsername)
-	password := readSecret(p, "Password: ", auth.ValidatePassword)
+	username, err = readLine(p, "Username: ", auth.ValidateUsername)
+	if err != nil {
+		return "", nil, err
+	}
+
+	password, err := readSecret(p, "Password: ", auth.ValidatePassword)
+	if err != nil {
+		return "", nil, err
+	}
 
 	user, err := h.userService.Authenticate(username, password)
 	if err != nil {
@@ -23,7 +30,10 @@ func (h *Handler) LoginUser(p *prompt.Prompt) (username string, lastLogin *time.
 	if user.TOTPEnabled {
 		fmt.Print(style.PromptStyle.Render("Authenticator code: "))
 
-		code := readLine(p, "Authenticator code: ", nil)
+		code, err := readLine(p, "Authenticator code: ", nil)
+		if err != nil {
+			return "", nil, err
+		}
 		if err := h.userService.VerifyTOTP(username, code); err != nil {
 			fmt.Println(style.ErrorStyle.Render("Login failed:"), err)
 			return "", nil, err

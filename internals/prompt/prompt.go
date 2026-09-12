@@ -77,12 +77,32 @@ func (p *Prompt) ReadLine(promptText string) (string, error) {
 	return strings.TrimSpace(line), nil
 }
 
+func (p *Prompt) ReadLineSensitive(promptText string) (string, error) {
+	p.rl.HistoryDisable()
+	defer p.rl.HistoryEnable()
+
+	p.rl.SetPrompt(promptText)
+	line, err := p.rl.Readline()
+	if err != nil {
+		if err == readline.ErrInterrupt {
+			return "", ErrInterrupted
+		}
+		return "", err
+	}
+	return strings.TrimSpace(line), nil
+}
+
 // ReadPassword reads masked input (no echo), still line-buffered.
 // Not added to history.
 func (p *Prompt) ReadPassword(promptText string) (string, error) {
+	p.rl.HistoryDisable()
+	defer p.rl.HistoryEnable()
 	pw, err := p.rl.ReadPassword(promptText)
 	if err != nil {
-		return "", err
+		if err == readline.ErrInterrupt {
+			return "", ErrInterrupted
+		}
+		return "", err // io.EOF on Ctrl+D, or real error
 	}
 	return strings.TrimSpace(string(pw)), nil
 }
